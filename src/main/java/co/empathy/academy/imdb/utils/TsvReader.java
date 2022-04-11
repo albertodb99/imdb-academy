@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
@@ -34,27 +36,50 @@ public class TsvReader {
             //We initialize the our auxiliary variable
             String line = null;
             //Until we reach the end of the file
-            while ((line = TSVReader.readLine()) != null) {
-                if(counter != 0) {
-                    //Split it by tabs
-                    String[] lineItems = line.split("\t");
-                    JsonObject object = Json.createObjectBuilder()
-                            .add("titleType", lineItems[1])
-                            .add("primaryTitle", lineItems[2])
-                            .add("originalTitle", lineItems[3])
-                            .add("isAdult", lineItems[4])
-                            .add("startYear", lineItems[5])
-                            .add("endYear", lineItems[6])
-                            .add("runtimeMinutes", lineItems[7])
-                            .add("genres", lineItems[8])
-                            .build();
-                    insertIndex(object, lineItems[0], indexName);
+            Map<String, JsonObject> map = new HashMap<>();
+            for(int i = 0; i < 1000; i++){
+                while ((line = TSVReader.readLine()) != null) {
+                        if(counter != 0) {
+                            //Split it by tabs
+                            String[] lineItems = line.split("\t");
+                            JsonObject object = Json.createObjectBuilder()
+                                    .add("titleType", lineItems[1])
+                                    .add("primaryTitle", lineItems[2])
+                                    .add("originalTitle", lineItems[3])
+                                    .add("isAdult", parseBoolean(lineItems[4]))
+                                    .add("startYear", lineItems[5])
+                                    .add("endYear", lineItems[6])
+                                    .add("runtimeMinutes", lineItems[7])
+                                    .add("genres", lineItems[8])
+                                    .build();
+                            map.put(lineItems[0], object);
+                        }
+                        counter++;
                 }
-                counter++;
             }
+            doBulkRequest(map);
+            map.clear();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private static void doBulkRequest(Map<String, JsonObject> map){
+        try {
+            client.bulk(_0 -> _0
+                    .operations(map.keySet().stream().map(x ->
+                            BulkOperation.of(_1 -> _1
+                                    .index(_2 -> _2
+                                            .index("films")
+                                            .id(x)
+                                            .document(map.get(x))))).toList()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static boolean parseBoolean(String lineItem) {
+        return !lineItem.equals("0");
     }
 
     private static void insertMapping(){

@@ -27,8 +27,10 @@ public class IndexController {
     @DeleteMapping("{indexName}")
     public void deleteIndex(@PathVariable String indexName){
         try {
+            //client.indices()
+            //        .delete(b -> b.index(indexName));
             client.indices()
-                    .delete(b -> b.index(indexName));
+                    .create(b -> b.index(indexName));
         } catch (IOException e) {
             e.printStackTrace();
         }
