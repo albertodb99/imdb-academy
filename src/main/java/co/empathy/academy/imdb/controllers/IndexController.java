@@ -37,6 +37,5 @@ public class IndexController {
     @PutMapping("/{indexName}")
     public void insertIndex(@PathVariable String indexName){
         TsvReader.indexFile("title.basics.tsv", indexName);
-
     }
 }

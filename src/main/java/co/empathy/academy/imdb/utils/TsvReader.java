@@ -2,6 +2,10 @@ package co.empathy.academy.imdb.utils;
 
 import client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.mapping.BooleanProperty;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.util.ObjectBuilder;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import org.springframework.util.ResourceUtils;
@@ -23,6 +27,8 @@ public class TsvReader {
             e.printStackTrace();
         }
         //We try to read it
+        //We insert the mapping
+        insertMapping();
         int counter = 0;
         try (BufferedReader TSVReader = new BufferedReader(new FileReader(file))) {
             //We initialize the our auxiliary variable
@@ -51,12 +57,45 @@ public class TsvReader {
         }
     }
 
+    private static void insertMapping(){
+        try {
+            client.indices().putMapping(_0 -> _0
+                    .index("films")
+                    .properties("titleType", _1 -> _1
+                            .text(_2 -> _2.analyzer("standard")))
+                    .properties("primaryTitle", _1 -> _1
+                            .text(_2 -> _2
+                                    .analyzer("standard")
+                                    .fields("raw", _3 -> _3
+                                            .keyword(_4 -> _4))))
+                    .properties("originalTitle", _1 -> _1
+                            .text(_2 -> _2
+                                    .analyzer("standard")
+                                    .fields("raw", _3 -> _3
+                                            .keyword(_4 -> _4))))
+                    .properties("isAdult", _1 -> _1
+                            .boolean_(_2 -> _2))
+                    .properties("startYear", _1 -> _1
+                            .integer(_2 -> _2))
+                    .properties("endYear", _1 -> _1
+                            .integer(_2 -> _2.index(false)))
+                    .properties("runtimeMinutes", _1 -> _1
+                            .integer(_2 -> _2.index(false)))
+                    .properties("genres", _1 -> _1
+                            .text(_2 -> _2.
+                                    analyzer("standard"))));
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     private static boolean insertIndex(JsonObject object, String id, String indexName){
         boolean created = false;
-
         Reader jsonReader = new StringReader(object.toString());
         try{
-            client.index(builder -> builder
+              client.index(builder -> builder
                     .index(indexName)
                     .id(id)
                     .withJson(jsonReader));
