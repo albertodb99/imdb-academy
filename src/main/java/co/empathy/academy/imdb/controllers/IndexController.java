@@ -7,6 +7,7 @@ import co.empathy.academy.imdb.utils.TsvReader;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -21,14 +22,14 @@ public class IndexController {
         } catch (IOException    e) {
             e.printStackTrace();
         }
-        return null;
+        return new HashMap<>();
     }
 
     @DeleteMapping("{indexName}")
     public void deleteIndex(@PathVariable String indexName){
         try {
-            //client.indices()
-            //        .delete(b -> b.index(indexName));
+            client.indices()
+                    .delete(b -> b.index(indexName));
             client.indices()
                     .create(b -> b.index(indexName));
         } catch (IOException e) {
@@ -36,7 +37,7 @@ public class IndexController {
         }
     }
 
-    @PutMapping("/{indexName}")
+    @GetMapping("/{indexName}")
     public void insertIndex(@PathVariable String indexName){
         TsvReader.indexFile("title.basics.tsv", indexName);
     }
