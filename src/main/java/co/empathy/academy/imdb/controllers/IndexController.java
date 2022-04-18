@@ -39,6 +39,12 @@ public class IndexController {
 
     @GetMapping("/{indexName}")
     public void insertIndex(@PathVariable String indexName){
-        TsvReader.indexFile("title.basics.tsv", indexName);
+        Thread task = new Thread(){
+            @Override
+            public void run() {
+                TsvReader.indexFile("title.basics.tsv", indexName);
+            }
+        };
+        task.start();
     }
 }

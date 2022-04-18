@@ -15,6 +15,16 @@ public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
     private static final String STANDARD = "standard";
+    private static final int HEADER = 0;
+    private static final int TITLE_TYPE = 1;
+    private static final int PRIMARY_TITLE = 2;
+    private static final int ORIGINAL_TITLE = 3;
+    private static final int IS_ADULT = 4;
+    private static final int START_YEAR = 5;
+    private static final int END_YEAR = 6;
+    private static final int RUNTIME_MINUTES = 7;
+    private static final int GENRES = 8;
+
 
     /**
      * Method to index a file into an elasticsearch container.
@@ -29,12 +39,12 @@ public class TsvReader {
         //We initialize our control variables
         int counter = 0;
         int batch = 500;
-        try (BufferedReader TSVReader = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader tsvReader = new BufferedReader(new FileReader(file))) {
             //We initialize our auxiliary variable
             String line = null;
             //We create the map
             Map<String, JsonObject> map = new HashMap<>();
-            while ((line = TSVReader.readLine()) != null) {
+            while ((line = tsvReader.readLine()) != null) {
                 //We skip the first line (header)
                 if (counter != 0) {
                     //Split it by tabs
@@ -42,7 +52,7 @@ public class TsvReader {
                     //We create the jsonObject
                     JsonObject object = parseStringToJsonObject(lineItems);
                     //And we add it to the map
-                    map.put(lineItems[0], object);
+                    map.put(lineItems[HEADER], object);
                 }
                 counter++;
                 //If we reach the desired number of iterations, we do the bulk request
@@ -80,14 +90,14 @@ public class TsvReader {
      */
     private static JsonObject parseStringToJsonObject(String[] lineItems) {
         return Json.createObjectBuilder()
-                .add("titleType", lineItems[1])
-                .add("primaryTitle", lineItems[2])
-                .add("originalTitle", lineItems[3])
-                .add("isAdult", parseBoolean(lineItems[4]))
-                .add("startYear", lineItems[5])
-                .add("endYear", parseInteger(lineItems[6]))
-                .add("runtimeMinutes", parseInteger(lineItems[7]))
-                .add("genres", lineItems[8])
+                .add("titleType", lineItems[TITLE_TYPE])
+                .add("primaryTitle", lineItems[PRIMARY_TITLE])
+                .add("originalTitle", lineItems[ORIGINAL_TITLE])
+                .add("isAdult", parseBoolean(lineItems[IS_ADULT]))
+                .add("startYear", lineItems[START_YEAR])
+                .add("endYear", parseInteger(lineItems[END_YEAR]))
+                .add("runtimeMinutes", parseInteger(lineItems[RUNTIME_MINUTES]))
+                .add("genres", lineItems[GENRES])
                 .build();
     }
 
@@ -98,7 +108,7 @@ public class TsvReader {
      * @return the string parsed to an integer
      */
     private static int parseInteger(String lineItem) {
-        int toRet = 0;
+        int toRet;
         try {
             toRet = Integer.parseInt(lineItem);
         }catch(NumberFormatException e){
@@ -114,13 +124,17 @@ public class TsvReader {
      */
     private static void doBulkRequest(Map<String, JsonObject> map, String indexName) {
         try {
-            client.bulk(_0 -> _0
+            client.bulk(first -> first
                     .operations(map.keySet().stream().map(x ->
-                            BulkOperation.of(_1 -> _1
-                                    .index(_2 -> _2
+                            BulkOperation.of(second -> second
+                                    .index(third -> third
                                             .index(indexName)
                                             .id(x)
-                                            .document(map.get(x))))).toList()
+                                            .document(map.get(x)
+                                            )
+                                    )
+                            )
+                            ).toList()
                     )
             );
         } catch (IOException e) {
@@ -142,31 +156,55 @@ public class TsvReader {
      */
     private static void insertMapping() {
         try {
-            client.indices().putMapping(_0 -> _0
+            client.indices().putMapping(first -> first
                     .index("films")
-                    .properties("titleType", _1 -> _1
-                            .text(_2 -> _2.analyzer(STANDARD)))
-                    .properties("primaryTitle", _1 -> _1
-                            .text(_2 -> _2
+                    .properties("titleType", second -> second
+                            .text(third -> third
                                     .analyzer(STANDARD)
-                                    .fields("raw", _3 -> _3
-                                            .keyword(_4 -> _4))))
-                    .properties("originalTitle", _1 -> _1
-                            .text(_2 -> _2
+                                    .fields("raw", fourth -> fourth
+                                            .keyword(fifth -> fifth)
+                                    )
+                            )
+                    )
+                    .properties("primaryTitle", second -> second
+                            .text(third -> third
                                     .analyzer(STANDARD)
-                                    .fields("raw", _3 -> _3
-                                            .keyword(_4 -> _4))))
-                    .properties("isAdult", _1 -> _1
-                            .boolean_(_2 -> _2))
-                    .properties("startYear", _1 -> _1
-                            .integer(_2 -> _2))
-                    .properties("endYear", _1 -> _1
-                            .integer(_2 -> _2.index(false)))
-                    .properties("runtimeMinutes", _1 -> _1
-                            .integer(_2 -> _2.index(false)))
-                    .properties("genres", _1 -> _1
-                            .text(_2 -> _2.
-                                    analyzer(STANDARD))));
+                                    .fields("raw", fourth -> fourth
+                                            .keyword(fifth -> fifth)
+                                    )
+                            )
+                    )
+                    .properties("originalTitle", second -> second
+                            .text(third -> third
+                                    .analyzer(STANDARD)
+                                    .fields("raw", fourth -> fourth
+                                            .keyword(fifth -> fifth)
+                                    )
+                            )
+                    )
+                    .properties("isAdult", second -> second
+                            .boolean_(third -> third)
+                    )
+                    .properties("startYear", second -> second
+                            .integer(third -> third)
+                    )
+                    .properties("endYear", second -> second
+                            .integer(third -> third.index(false)
+                            )
+                    )
+                    .properties("runtimeMinutes", second -> second
+                            .integer(third -> third.index(false)
+                            )
+                    )
+                    .properties("genres", second -> second
+                            .text(third -> third
+                                    .analyzer(STANDARD)
+                                    .fields("raw", fourth -> fourth
+                                            .keyword(fifth -> fifth)
+                                    )
+                            )
+                    )
+            );
 
         } catch (IOException e) {
             e.printStackTrace();
