@@ -1,4 +1,4 @@
-package client;
+package co.empathy.academy.imdb.client;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;

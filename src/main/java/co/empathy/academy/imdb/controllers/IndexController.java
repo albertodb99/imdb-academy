@@ -1,6 +1,6 @@
 package co.empathy.academy.imdb.controllers;
 
-import client.ClientCustomConfiguration;
+import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.indices.IndexState;
 import co.empathy.academy.imdb.utils.TsvReader;
@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 public class IndexController {
@@ -37,14 +38,12 @@ public class IndexController {
         }
     }
 
-    @GetMapping("/{indexName}")
-    public void insertIndex(@PathVariable String indexName){
-        Thread task = new Thread(){
-            @Override
-            public void run() {
-                TsvReader.indexFile("title.basics.tsv", indexName);
-            }
-        };
-        task.start();
+    @GetMapping("/index_documents")
+    public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
+        ratingsPathOpt.ifPresentOrElse(
+                ratingsPath -> new Thread(new TsvReader(filmsPath, ratingsPath)::indexFile).start(),
+                () -> new Thread(new TsvReader(filmsPath)::indexFile).start()
+        );
     }
+
 }

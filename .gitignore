@@ -34,4 +34,5 @@ build/
 
 ### RESOURCES ###
 title.basics.tsv
-shorter.tsv
+shorterfilms.tsv
+shorterratings.tsv
