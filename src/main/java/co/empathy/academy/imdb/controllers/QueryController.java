@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -19,26 +20,35 @@ public class QueryController {
 
     ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
-    @GetMapping("/q")
-    public List<JsonValue> get(@RequestParam String query){
+    @GetMapping("/search")
+    public String simpleQuery(@RequestParam String q){
         try {
-            SearchResponse<JsonData> response = client.search(first -> first
-                    .query(second -> second
-                            .queryString(third -> third
-                                    .query(query)
-                                    .defaultField("primaryTitle")
-                            )
-                    ) , JsonData.class
-            );
-            return response.hits()
-                    .hits()
-                    .stream()
-                    .filter(hit -> hit.source() != null)
-                    .map(hit -> hit.source().toJson()).toList();
+            SearchResponse<JsonData> response = createResponse(q);
+            return parseHits(response);
         } catch (IOException e) {
-
+            e.printStackTrace();
         }
         return null;
+    }
+
+
+    private String parseHits(SearchResponse<JsonData> response) {
+        return response.hits()
+                .hits()
+                .stream()
+                .filter(hit -> hit.source() != null)
+                .map(hit -> hit.source().toJson()).toList().toString();
+    }
+
+    private SearchResponse<JsonData> createResponse(String q) throws IOException {
+        return client.search(first -> first
+                .query(second -> second
+                        .queryString(third -> third
+                                .query(q)
+                                .defaultField("primaryTitle")
+                        )
+                ) , JsonData.class
+        );
     }
 
 

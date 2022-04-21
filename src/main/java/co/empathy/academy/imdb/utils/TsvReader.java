@@ -1,14 +1,15 @@
 package co.empathy.academy.imdb.utils;
 
+import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
+import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.empathy.academy.imdb.model.Film;
 import co.empathy.academy.imdb.model.Rating;
 import jakarta.json.Json;
-import jakarta.json.JsonObject;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
-import org.springframework.util.ResourceUtils;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -20,17 +21,7 @@ public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
     private static final String STANDARD = "standard";
-    private static final int HEADER = 0;
-    private static final int TITLE_TYPE = 1;
-    private static final int PRIMARY_TITLE = 2;
-    private static final int ORIGINAL_TITLE = 3;
-    private static final int IS_ADULT = 4;
-    private static final int START_YEAR = 5;
-    private static final int END_YEAR = 6;
-    private static final int RUNTIME_MINUTES = 7;
-    private static final int GENRES = 8;
-    private static final int AVERAGE_RATING = 9;
-    private static final int NUM_VOTES = 10;
+    private static final int BATCH_SIZE = 25000;
 
     private String filmsPath;
     private String ratingsPath;
@@ -49,29 +40,87 @@ public class TsvReader {
      * Method to index a file into an elasticsearch container.
      */
     public void indexFile() {
-        //We insert the mapping
-        insertMapping();
         //Now we read all the lines of the films file.
         Map<String, Film> filmsMap;
         List<Rating> ratings;
+        long start, end;
         try {
-            filmsMap = Files.readAllLines(Paths.get(filmsPath)).stream().map(Film::new).collect(
-                    Collectors.toMap(Film::getId, Film::getFilm));
+            //We insert the mapping
+            insertMapping();
+            start = System.currentTimeMillis();
+            filmsMap = getFilmsMapFromFile();
+            end = System.currentTimeMillis();
+            System.out.println("Elapsed time in reading films file is: " + (end - start) + "ms");
             if(ratingsPath != null) {
-                ratings = Files.readAllLines(Paths.get(ratingsPath))
-                        .stream()
-                        .map(rating -> new Rating(rating))
-                        .toList();
-                for(Rating r : ratings){
-                    Film f = filmsMap.get(r.getId());
-                    if(f != null)
-                        r.copyToFilm(f);
-                }
+                start = System.currentTimeMillis();
+                ratings = getRatingsListFromFile();
+                end = System.currentTimeMillis();
+                System.out.println("Elapsed time in reading ratings file is: " + (end - start) + "ms");
+                start = System.currentTimeMillis();
+                mergeFilmsAndRatings(filmsMap, ratings);
+                end = System.currentTimeMillis();
+                System.out.println("Elapsed time in merging collections is: " + (end - start) + "ms");
             }
+            List<JsonReference> filmsParsed = parseFilmsFromMap(filmsMap);
+            doBulkOperations(filmsParsed);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    private void doBulkOperations(List<JsonReference> filmsParsed) throws IOException {
+        List<BulkOperation> operations = new ArrayList<>();
+        long start, end;
+        for(JsonReference film : filmsParsed){
+            IndexOperation<Object> indexOperation = new IndexOperation.Builder<>()
+                    .index("films")
+                    .document(film.getJson())
+                    .id(film.getId())
+                    .build();
+            BulkOperation bulkOperation = new BulkOperation.Builder()
+                    .index(indexOperation)
+                    .build();
+            operations.add(bulkOperation);
+            if(operations.size() >= BATCH_SIZE) {
+                start = System.currentTimeMillis();
+                doBulkRequest(operations);
+                end = System.currentTimeMillis();
+                System.out.println("Elapsed time in doing 25.000 requests is: " + (end - start) + "ms");
+                operations.clear();
+            }
+        }
+    }
+
+    private List<JsonReference> parseFilmsFromMap(Map<String, Film> filmsMap) {
+        return new ArrayList<Film>(filmsMap.values())
+                .stream()
+                .map(this::parseStringToJson)
+                .toList();
+    }
+
+    private void mergeFilmsAndRatings(Map<String, Film> filmsMap, List<Rating> ratings) {
+        for(Rating r : ratings){
+            Film f = filmsMap.get(r.getId());
+            if(f != null)
+                r.copyToFilm(f);
+        }
+    }
+
+    private List<Rating> getRatingsListFromFile() throws IOException {
+        return Files.readAllLines(Paths.get(ratingsPath))
+                .stream()
+                .skip(1)
+                .map(Rating::new)
+                .toList();
+    }
+
+    private Map<String, Film> getFilmsMapFromFile() throws IOException {
+        return Files.readAllLines(Paths.get(filmsPath))
+                .stream()
+                .skip(1)
+                .map(Film::new)
+                .collect(Collectors.toMap(Film::getId, Film::getFilm));
     }
 
     /**
@@ -81,6 +130,8 @@ public class TsvReader {
      * @return the JsonObject formatted.
      */
     private JsonReference parseStringToJson(Film film) {
+        JsonArrayBuilder array = Json.createArrayBuilder();
+        Arrays.stream(film.getGenres()).forEach(array::add);
         JsonObjectBuilder json = Json.createObjectBuilder()
                 .add("titleType", film.getTitleType())
                 .add("primaryTitle", film.getPrimaryTitle())
@@ -89,10 +140,12 @@ public class TsvReader {
                 .add("startYear", film.getStartYear())
                 .add("endYear", film.getEndYear())
                 .add("runtimeMinutes", film.getRuntimeMinutes())
-                .add("genres", Arrays.toString(film.getGenres()));
+                .add("genres", array.build());
         if(ratingsPath != null){
-            json.add("averageRating", AVERAGE_RATING);
-            json.add("numVotes", NUM_VOTES);
+            if(film.getRating() == null)
+                film.setRating(new Rating(film));
+            json.add("averageRating", film.getRating().getAverageRating());
+            json.add("numVotes", film.getRating().getAverageRating());
         }
         return new JsonReference(film.getId(), json.build());
     }
@@ -100,34 +153,18 @@ public class TsvReader {
     /**
      * Method that receives a Map and do a BulkRequest of the operations contained
      * in that map.
-     * @param map is the map that contains the operations we want to do.
      */
-    private void doBulkRequest(Map<String, JsonObject> map) {
-        try {
+    private void doBulkRequest(List<BulkOperation> operations) throws IOException {
             client.bulk(first -> first
-                    .operations(map.keySet().stream().map(x ->
-                            BulkOperation.of(second -> second
-                                    .index(third -> third
-                                            .index("films")
-                                            .id(x)
-                                            .document(map.get(x)
-                                            )
-                                    )
-                            )
-                            ).toList()
-                    )
+                    .operations(operations)
             );
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
      * Method that puts the map we want to the index of films.
      */
-    private void insertMapping() {
-        try {
-            client.indices().putMapping(first -> first
+    private void insertMapping() throws IOException {
+            PutMappingRequest.Builder request = new PutMappingRequest.Builder()
                     .index("films")
                     .properties("titleType", second -> second
                             .text(third -> third
@@ -174,11 +211,14 @@ public class TsvReader {
                                             .keyword(fifth -> fifth)
                                     )
                             )
-                    )
-            );
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                    );
+            if(ratingsPath != null){
+                request
+                        .properties("averageRating", first -> first
+                                .float_(second -> second))
+                        .properties("numVotes", first -> first
+                                .integer(second -> second));
+            }
+            client.indices().putMapping(request.build());
     }
 }

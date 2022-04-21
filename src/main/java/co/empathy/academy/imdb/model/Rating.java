@@ -18,6 +18,12 @@ public class Rating implements Indexable {
         this.numVotes = parseStringToInt(parsed[NUM_VOTES]);
     }
 
+    public Rating(Film film) {
+        this.id = film.getId();
+        this.averageRating = 0;
+        this.numVotes = 0;
+    }
+
     @Override
     public String getId() {
         return id;
