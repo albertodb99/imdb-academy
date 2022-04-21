@@ -3,6 +3,8 @@ package co.empathy.academy.imdb.utils;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.empathy.academy.imdb.model.Film;
+import co.empathy.academy.imdb.model.Rating;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
@@ -11,10 +13,8 @@ import org.springframework.util.ResourceUtils;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
@@ -52,15 +52,21 @@ public class TsvReader {
         //We insert the mapping
         insertMapping();
         //Now we read all the lines of the films file.
-        List<String> filmsLines;
-        List<String> ratingsLines;
+        Map<String, Film> filmsMap;
+        List<Rating> ratings;
         try {
-            filmsLines = Files.readAllLines(Paths.get(filmsPath));
-            if(ratingsPath != null)
-                ratingsLines = Files.readAllLines(Paths.get(ratingsPath));
-            for(int i = 1; i < filmsLines.size() ; i++){
-                String[] filmsLineSplitted = filmsLines.get(i).split("\t");
-
+            filmsMap = Files.readAllLines(Paths.get(filmsPath)).stream().map(Film::new).collect(
+                    Collectors.toMap(Film::getId, Film::getFilm));
+            if(ratingsPath != null) {
+                ratings = Files.readAllLines(Paths.get(ratingsPath))
+                        .stream()
+                        .map(rating -> new Rating(rating))
+                        .toList();
+                for(Rating r : ratings){
+                    Film f = filmsMap.get(r.getId());
+                    if(f != null)
+                        r.copyToFilm(f);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -71,40 +77,24 @@ public class TsvReader {
     /**
      * Method that gets an array of strings and convert them to the JSON
      * structure that we need.
-     * @param lineItems is the array of strings we want to parse to JSON
+     * @param film is the array of strings we want to parse to JSON
      * @return the JsonObject formatted.
      */
-    private JsonReference parseStringToJson(String[] lineItems) {
+    private JsonReference parseStringToJson(Film film) {
         JsonObjectBuilder json = Json.createObjectBuilder()
-                .add("titleType", lineItems[TITLE_TYPE])
-                .add("primaryTitle", lineItems[PRIMARY_TITLE])
-                .add("originalTitle", lineItems[ORIGINAL_TITLE])
-                .add("isAdult", parseBoolean(lineItems[IS_ADULT]))
-                .add("startYear", lineItems[START_YEAR])
-                .add("endYear", parseInteger(lineItems[END_YEAR]))
-                .add("runtimeMinutes", parseInteger(lineItems[RUNTIME_MINUTES]))
-                .add("genres", lineItems[GENRES]);
+                .add("titleType", film.getTitleType())
+                .add("primaryTitle", film.getPrimaryTitle())
+                .add("originalTitle", film.getOriginalTitle())
+                .add("isAdult", film.isAdult())
+                .add("startYear", film.getStartYear())
+                .add("endYear", film.getEndYear())
+                .add("runtimeMinutes", film.getRuntimeMinutes())
+                .add("genres", Arrays.toString(film.getGenres()));
         if(ratingsPath != null){
             json.add("averageRating", AVERAGE_RATING);
             json.add("numVotes", NUM_VOTES);
         }
-        return new JsonReference(lineItems[HEADER], json.build());
-    }
-
-    /**
-     * Auxiliary method to help with the mapping. It tries to parse an
-     * String to an Integer, if it is not possible, a 0 is returned
-     * @param lineItem is the String we want to parse
-     * @return the string parsed to an integer
-     */
-    private int parseInteger(String lineItem) {
-        int toRet;
-        try {
-            toRet = Integer.parseInt(lineItem);
-        }catch(NumberFormatException e){
-            toRet = 0;
-        }
-        return toRet;
+        return new JsonReference(film.getId(), json.build());
     }
 
     /**
@@ -130,15 +120,6 @@ public class TsvReader {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Method that parses a String to boolean
-     * @param lineItem is the string we want to parse
-     * @return the boolean converted
-     */
-    private boolean parseBoolean(String lineItem) {
-        return !lineItem.equals("0");
     }
 
     /**

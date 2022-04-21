@@ -40,10 +40,14 @@ public class IndexController {
 
     @GetMapping("/index_documents")
     public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
+        /**
         ratingsPathOpt.ifPresentOrElse(
                 ratingsPath -> new Thread(new TsvReader(filmsPath, ratingsPath)::indexFile).start(),
                 () -> new Thread(new TsvReader(filmsPath)::indexFile).start()
         );
+         */
+        if(ratingsPathOpt.isPresent())
+            new TsvReader(filmsPath, ratingsPathOpt.get()).indexFile();
     }
 
 }
