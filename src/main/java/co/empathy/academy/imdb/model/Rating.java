@@ -73,4 +73,8 @@ public class Rating implements Indexable {
         }
         return toRet;
     }
+
+    public Rating getIdentity() {
+        return this;
+    }
 }

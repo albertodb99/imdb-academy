@@ -21,7 +21,7 @@ public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
     private static final String STANDARD = "standard";
-    private static final int BATCH_SIZE = 25000;
+    private static final int BATCH_SIZE = 100000;
 
     private String filmsPath;
     private String ratingsPath;
@@ -41,28 +41,31 @@ public class TsvReader {
      */
     public void indexFile() {
         //Now we read all the lines of the films file.
-        Map<String, Film> filmsMap;
-        List<Rating> ratings;
-        long start, end;
+        List<String> films;
+        Map<String, Rating> ratings;
+        int startingRange = 0;
+        int endRange = BATCH_SIZE;
         try {
             //We insert the mapping
             insertMapping();
-            start = System.currentTimeMillis();
-            filmsMap = getFilmsMapFromFile();
-            end = System.currentTimeMillis();
-            System.out.println("Elapsed time in reading films file is: " + (end - start) + "ms");
+            films = getFilmsFromFile();
             if(ratingsPath != null) {
-                start = System.currentTimeMillis();
-                ratings = getRatingsListFromFile();
-                end = System.currentTimeMillis();
-                System.out.println("Elapsed time in reading ratings file is: " + (end - start) + "ms");
-                start = System.currentTimeMillis();
-                mergeFilmsAndRatings(filmsMap, ratings);
-                end = System.currentTimeMillis();
-                System.out.println("Elapsed time in merging collections is: " + (end - start) + "ms");
+                ratings = getRatingsMapFromFile();
+                do{
+                    if(films.size() - endRange < BATCH_SIZE)
+                        endRange = films.size() - 1;
+                    List<Film> filmsList = getFilmsListFromSubset(films.subList(startingRange, endRange));
+                    mergeFilmsAndRatings(filmsList, ratings);
+                    List<JsonReference> filmsParsed = parseFilmsFromList(filmsList);
+                    doBulkOperations(filmsParsed);
+                    System.out.println("Documents indexed until now: " + endRange);
+                    if(endRange != films.size() - 1) {
+                        startingRange += BATCH_SIZE;
+                        endRange += BATCH_SIZE;
+                    }
+                }while(endRange < films.size() - 1);
+
             }
-            List<JsonReference> filmsParsed = parseFilmsFromMap(filmsMap);
-            doBulkOperations(filmsParsed);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -71,7 +74,6 @@ public class TsvReader {
 
     private void doBulkOperations(List<JsonReference> filmsParsed) throws IOException {
         List<BulkOperation> operations = new ArrayList<>();
-        long start, end;
         for(JsonReference film : filmsParsed){
             IndexOperation<Object> indexOperation = new IndexOperation.Builder<>()
                     .index("films")
@@ -82,45 +84,44 @@ public class TsvReader {
                     .index(indexOperation)
                     .build();
             operations.add(bulkOperation);
-            if(operations.size() >= BATCH_SIZE) {
-                start = System.currentTimeMillis();
-                doBulkRequest(operations);
-                end = System.currentTimeMillis();
-                System.out.println("Elapsed time in doing 25.000 requests is: " + (end - start) + "ms");
-                operations.clear();
-            }
         }
+        doBulkRequest(operations);
     }
 
-    private List<JsonReference> parseFilmsFromMap(Map<String, Film> filmsMap) {
-        return new ArrayList<Film>(filmsMap.values())
+    private List<JsonReference> parseFilmsFromList(List<Film> filmsList) {
+        return filmsList
                 .stream()
                 .map(this::parseStringToJson)
                 .toList();
     }
 
-    private void mergeFilmsAndRatings(Map<String, Film> filmsMap, List<Rating> ratings) {
-        for(Rating r : ratings){
-            Film f = filmsMap.get(r.getId());
-            if(f != null)
+    private void mergeFilmsAndRatings(List<Film> filmsList, Map<String, Rating> ratingsMap) {
+        for(Film f : filmsList) {
+            Rating r = ratingsMap.get(f.getId());
+            if(r != null){
                 r.copyToFilm(f);
+            }
         }
     }
 
-    private List<Rating> getRatingsListFromFile() throws IOException {
+    private Map<String, Rating> getRatingsMapFromFile() throws IOException {
         return Files.readAllLines(Paths.get(ratingsPath))
                 .stream()
                 .skip(1)
                 .map(Rating::new)
-                .toList();
+                .collect(Collectors.toMap(Rating::getId, Rating::getIdentity));
     }
 
-    private Map<String, Film> getFilmsMapFromFile() throws IOException {
-        return Files.readAllLines(Paths.get(filmsPath))
+    private List<String> getFilmsFromFile() throws IOException {
+        return Files.readAllLines(Paths.get(filmsPath));
+    }
+
+    private List<Film> getFilmsListFromSubset(List<String> filmsSubSet) throws IOException {
+        return filmsSubSet
                 .stream()
                 .skip(1)
                 .map(Film::new)
-                .collect(Collectors.toMap(Film::getId, Film::getFilm));
+                .toList();
     }
 
     /**
@@ -167,11 +168,7 @@ public class TsvReader {
             PutMappingRequest.Builder request = new PutMappingRequest.Builder()
                     .index("films")
                     .properties("titleType", second -> second
-                            .text(third -> third
-                                    .analyzer(STANDARD)
-                                    .fields("raw", fourth -> fourth
-                                            .keyword(fifth -> fifth)
-                                    )
+                            .keyword(third -> third
                             )
                     )
                     .properties("primaryTitle", second -> second
@@ -205,11 +202,7 @@ public class TsvReader {
                             )
                     )
                     .properties("genres", second -> second
-                            .text(third -> third
-                                    .analyzer(STANDARD)
-                                    .fields("raw", fourth -> fourth
-                                            .keyword(fifth -> fifth)
-                                    )
+                            .keyword(third -> third
                             )
                     );
             if(ratingsPath != null){
