@@ -48,6 +48,15 @@
 			<artifactId>elasticsearch-java</artifactId>
 			<version>7.17.2</version>
 		</dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-ui</artifactId>
+			<version>1.6.7</version>
+		</dependency>
 	</dependencies>
 
 	<build>

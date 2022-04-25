@@ -23,7 +23,7 @@ public class TsvReader {
     private static final String STANDARD = "standard";
     private static final int BATCH_SIZE = 100000;
 
-    private String filmsPath;
+    private final String filmsPath;
     private String ratingsPath;
 
     public TsvReader(String filmsPath, String ratingsPath){
@@ -58,7 +58,6 @@ public class TsvReader {
                     mergeFilmsAndRatings(filmsList, ratings);
                     List<JsonReference> filmsParsed = parseFilmsFromList(filmsList);
                     doBulkOperations(filmsParsed);
-                    System.out.println("Documents indexed until now: " + endRange);
                     if(endRange != films.size() - 1) {
                         startingRange += BATCH_SIZE;
                         endRange += BATCH_SIZE;
@@ -116,7 +115,7 @@ public class TsvReader {
         return Files.readAllLines(Paths.get(filmsPath));
     }
 
-    private List<Film> getFilmsListFromSubset(List<String> filmsSubSet) throws IOException {
+    private List<Film> getFilmsListFromSubset(List<String> filmsSubSet) {
         return filmsSubSet
                 .stream()
                 .skip(1)
