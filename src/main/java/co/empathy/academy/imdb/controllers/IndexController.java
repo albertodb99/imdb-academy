@@ -37,7 +37,7 @@ public class IndexController {
         return new HashMap<>();
     }
 
-    @Operation(summary = "Does a query on the database")
+    @Operation(summary = "Creates an index in the database")
     @Parameter(name = "indexName", description = "The name of the index we want to create")
     @ApiResponse(responseCode = "200", description = "Index created", content =
             { @Content(mediaType = "application/json")})
@@ -58,6 +58,14 @@ public class IndexController {
         }
     }
 
+    @Operation(summary = "Deletes an index on the database")
+    @Parameter(name = "indexName", description = "The name of the index we want to delete")
+    @ApiResponse(responseCode = "200", description = "Index deleted", content =
+            { @Content(mediaType = "application/json")})
+    @ApiResponse(responseCode = "400", description = "The index does not exist", content =
+            { @Content(mediaType = "application/json")})
+    @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
+            { @Content(mediaType = "application/json")})
     @DeleteMapping("{indexName}")
     public boolean deleteIndex(@PathVariable String indexName){
         try {
@@ -71,6 +79,11 @@ public class IndexController {
         }
     }
 
+    @Operation(summary = "Insert documents in the index films")
+    @ApiResponse(responseCode = "200", description = "Documents indexed", content =
+            { @Content(mediaType = "application/json")})
+    @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
+            { @Content(mediaType = "application/json")})
     @GetMapping("/index_documents")
     public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
         ratingsPathOpt.ifPresentOrElse(
