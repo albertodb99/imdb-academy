@@ -1,7 +1,5 @@
 package co.empathy.academy.imdb.controllers;
 
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.AggregationBuilders;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -38,8 +36,8 @@ public class QueryController {
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         q.ifPresent(s -> addSearch(s, boolQuery));
-        type.ifPresent(strings -> addFilter(strings, boolQuery));
-        genre.ifPresent(strings -> addFilter(strings, boolQuery));
+        type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
+        genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
 
         request.query(boolQuery.build()._toQuery());
@@ -61,16 +59,17 @@ public class QueryController {
         request.aggregations("agg_" + agg, termsAggregation._toAggregation());
     }
 
-    private void addFilter(List<String> strings, BoolQuery.Builder boolQuery) {
+    private void addFilter(List<String> strings, String field, BoolQuery.Builder boolQuery) {
         List<Query> queries = new ArrayList<>();
         for(String string : strings){
             queries.add(QueryBuilders
                     .term()
-                    .field("genres")
+                    .field(field)
                     .value(string)
                     .build()
                     ._toQuery());
         }
+        boolQuery.filter(queries);
     }
 
     private void addSearch(String q, BoolQuery.Builder boolQuery) {
