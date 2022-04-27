@@ -40,7 +40,7 @@ public class IndexController {
     }
 
     @Operation(summary = "Creates an index in the database")
-    @Parameter(name = "indexName", description = "The name of the index we want to create")
+    @Parameter(name = "indexName", description = "The name of the index we want to create", required = true)
     @ApiResponse(responseCode = "200", description = "Index created", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "400", description = "The index already exists", content =
@@ -61,7 +61,7 @@ public class IndexController {
     }
 
     @Operation(summary = "Deletes an index on the database")
-    @Parameter(name = "indexName", description = "The name of the index we want to delete")
+    @Parameter(name = "indexName", description = "The name of the index we want to delete", required = true)
     @ApiResponse(responseCode = "200", description = "Index deleted", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "400", description = "The index does not exist", content =
@@ -82,7 +82,8 @@ public class IndexController {
     }
 
     @Operation(summary = "Insert documents in the index films")
-    @Parameter(name = "filmsPath", description = "The path of the films .tsv that has to be indexed")
+    @Parameter(name = "filmsPath", description = "The path of the films .tsv that has to be indexed",
+            required = true)
     @Parameter(name = "ratingsPathOpt", description = "The path of the ratings of the films .tsv that has to be indexed",
             required = false)
     @ApiResponse(responseCode = "200", description = "Documents indexed", content =
