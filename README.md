@@ -44,6 +44,11 @@ localhost:8080/index_documents
 ```
 It is very important that in the query you add two variables: filmsPath which contains the path of the .tsv file corresponding to title.basics.tsv, which is the file expected; and ratingsPathOpt, which is optional, and contains the path of the .tsv file corresponding to the title.ratings.tsv file.
 
+Example:
+<img width="510" alt="image" src="https://user-images.githubusercontent.com/60233035/165483860-1de4928b-002b-431c-83ee-4c946b16c775.png">
+
 &nbsp;
+
+Once you have done this, you are able to start doing queries ;)
 
 This operations can be done easily looking to the Swagger Documentation provided, just in case you struggle doing it with any application, opening the following URL when the application is running: http://localhost:8080/swagger-ui/index.html
