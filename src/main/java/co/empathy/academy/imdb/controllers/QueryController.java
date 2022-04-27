@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-@Tag(name = "Private controller", description = "Allows to do queries. You can do simple queries as well as queries " +
+@Tag(name = "Query controller", description = "Allows to do queries. You can do simple queries as well as queries " +
         "with filters and aggregations.")
 @RestController
 @RequestMapping("/api")

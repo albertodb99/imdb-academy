@@ -13,7 +13,7 @@ public class SwaggerConfig {
                                  @Value("${application-version}") String appVersion) {
         return new OpenAPI()
                 .info(new Info()
-                        .title("sample application API")
+                        .title("IMDB Database Search-Engine API")
                         .version(appVersion)
                         .description(appDescription)
                         .termsOfService("http://swagger.io/terms/")
