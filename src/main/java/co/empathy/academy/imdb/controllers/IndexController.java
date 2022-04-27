@@ -82,6 +82,9 @@ public class IndexController {
     }
 
     @Operation(summary = "Insert documents in the index films")
+    @Parameter(name = "filmsPath", description = "The path of the films .tsv that has to be indexed")
+    @Parameter(name = "ratingsPathOpt", description = "The path of the ratings of the films .tsv that has to be indexed",
+            required = false)
     @ApiResponse(responseCode = "200", description = "Documents indexed", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
