@@ -2,7 +2,7 @@
 Repository for the Empathy's Academy program consisting on an IMDB like search engine using Elasticsearch and Springboot
 
 ## Requirements ##
-- ElasticSearch 7.17.2
+- Maven 3.8.4
 - Docker
 - Java 17
 - SpringBoot 2.6.6
