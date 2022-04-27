@@ -90,7 +90,7 @@ public class IndexController {
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
             { @Content(mediaType = "application/json")})
-    @GetMapping("/index_documents")
+    @PostMapping("/index_documents")
     public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
         ratingsPathOpt.ifPresentOrElse(
                 ratingsPath -> new Thread(new TsvReader(filmsPath, ratingsPath)::indexFile).start(),
