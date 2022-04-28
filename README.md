@@ -6,7 +6,9 @@ Repository for the Empathy's Academy program consisting on an IMDB like search e
 - Docker
 - Java 17
 - SpringBoot 2.6.6
-- (Optional)Some application to do requests easily, in my case, I use Insomnia
+- Databases that can be downloaded from here: https://datasets.imdbws.com/
+- (Optional) Some application to do requests easily, in my case, I use Insomnia
+- (Optional) You can use SDKMan to download Maven, Java and Springboot easily!
 
 ## Installation ##
 First of all, you have to download the project: 
