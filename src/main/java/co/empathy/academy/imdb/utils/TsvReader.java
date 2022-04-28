@@ -155,9 +155,9 @@ public class TsvReader {
      * in that map.
      */
     private void doBulkRequest(List<BulkOperation> operations) throws IOException {
-            client.bulk(first -> first
+        client.bulk(first -> first
                     .operations(operations)
-            );
+        );
     }
 
     /**
@@ -171,7 +171,7 @@ public class TsvReader {
                             )
                     )
                     .properties("primaryTitle", second -> second
-                            .text(third -> third
+                            .text(third -> third.boost(10.0)
                                     .analyzer(STANDARD)
                                     .fields("raw", fourth -> fourth
                                             .keyword(fifth -> fifth)
@@ -179,7 +179,7 @@ public class TsvReader {
                             )
                     )
                     .properties("originalTitle", second -> second
-                            .text(third -> third
+                            .text(third -> third.boost(9.0)
                                     .analyzer(STANDARD)
                                     .fields("raw", fourth -> fourth
                                             .keyword(fifth -> fifth)

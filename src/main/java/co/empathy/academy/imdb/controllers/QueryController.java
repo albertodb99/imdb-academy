@@ -110,21 +110,21 @@ public class QueryController {
     private void addSearch(String q, BoolQuery.Builder boolQuery) {
         List<Query> queries = new ArrayList<>();
         queries.add(QueryBuilders
-                .match()
-                .field("primaryTitle")
+                .multiMatch()
+                .fields("primaryTitle", "originalTitle")
                 .query(q)
-                        .boost(10.0f)
                 .build()
                 ._toQuery());
         boolQuery.must(queries);
     }
 
     private String parseHits(SearchResponse<JsonData> response) {
-        return response.hits()
-                .hits()
-                .stream()
-                .filter(hit -> hit.source() != null)
-                .map(hit -> hit.source().toJson()).toList().toString();
+        return response.hits().hits().stream().filter(x -> x.source() != null).map(x ->
+                Json.createObjectBuilder()
+                        .add("id", x.id())
+                        .add("source", x.source().toJson())
+                        .build()
+        ).toList().toString();
     }
 
     private String parseAggregations(String aggName, SearchResponse<JsonData> response){
