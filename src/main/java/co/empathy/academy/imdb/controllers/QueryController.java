@@ -8,7 +8,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -49,6 +48,7 @@ public class QueryController {
     @Parameter(name = "genre", description = "Genre of the film. It must match exactly and can be one or more, " +
             "separated by commas.")
     @Parameter(name = "agg", description = "The field you want to aggregate. It has to match exactly.")
+    @Parameter(name = "gte", description = "A number for the average rating to be greater than or equal.")
     @ApiResponse(responseCode = "200", description = "Documents obtained", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "400", description = "Bad request", content =
@@ -60,7 +60,8 @@ public class QueryController {
             @RequestParam(required = false) Optional<String> q,
             @RequestParam(required = false) Optional<List<String>> type,
             @RequestParam(required = false) Optional<List<String>> genre,
-            @RequestParam(required = false) Optional<String>agg){
+            @RequestParam(required = false) Optional<String>agg,
+            @RequestParam(required = false) Optional<String>gte){
 
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
@@ -68,7 +69,7 @@ public class QueryController {
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
-
+        gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
         request.query(boolQuery.build()._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
 
@@ -93,6 +94,16 @@ public class QueryController {
                     .build()
                     ._toQuery());
         }
+        boolQuery.filter(queries);
+    }
+
+    private void addRangeFilter(String string, String field, BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+            queries.add(QueryBuilders
+                    .range()
+                    .field(field)
+                    .gte(JsonData.of(string))
+                    .build()._toQuery());
         boolQuery.filter(queries);
     }
 
