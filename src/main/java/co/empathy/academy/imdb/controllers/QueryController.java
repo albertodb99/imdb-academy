@@ -102,7 +102,7 @@ public class QueryController {
                 .match()
                 .field("primaryTitle")
                 .query(q)
-                        .boost(Float.valueOf("10.0"))
+                        .boost(10.0f)
                 .build()
                 ._toQuery());
         boolQuery.must(queries);
