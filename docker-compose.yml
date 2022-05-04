@@ -6,6 +6,24 @@ services:
     container_name: elasticsearchComp
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
     ports:
       - "9200:9200"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "localhost:9200"]
+      interval: 30s
+      retries: 10
+
+  restapi:
+    container_name: restAPI-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    links:
+      - elasticsearch
+    volumes:
+      - "/Users/$USER/Documents/IMDBs:/Users/$USER/Documents/IMDBs:rw"

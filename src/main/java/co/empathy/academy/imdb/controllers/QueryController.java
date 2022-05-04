@@ -1,6 +1,6 @@
 package co.empathy.academy.imdb.controllers;
 
-import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.*;
 import co.elastic.clients.elasticsearch._types.aggregations.AggregationBuilders;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
@@ -61,19 +61,46 @@ public class QueryController {
             @RequestParam(required = false) Optional<List<String>> type,
             @RequestParam(required = false) Optional<List<String>> genre,
             @RequestParam(required = false) Optional<String>agg,
-            @RequestParam(required = false) Optional<String>gte){
+            @RequestParam(required = false) Optional<String>gte,
+            @RequestParam(required = false) Optional<Integer> from,
+            @RequestParam(required = false) Optional<Integer> size){
 
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
+        from.ifPresent(request::from);
+        size.ifPresent(request::size);
         q.ifPresent(s -> addSearch(s, boolQuery));
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
         gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
+        removeAdultFilms(boolQuery);
         request.query(boolQuery.build()._toQuery());
+        addSort(request);
         SearchResponse<JsonData> response = createResponse(request.build());
 
         return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
+    }
+
+    private void addSort(SearchRequest.Builder request) {
+        request.sort(new SortOptions
+                .Builder()
+                .field(SortOptionsBuilders
+                    .field()
+                    .field("averageRating")
+                    .order(SortOrder.Desc)
+                    .build())
+                .build());
+    }
+
+    private void removeAdultFilms(BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(QueryBuilders
+                .term()
+                .field("isAdult")
+                .value(false)
+                .build()._toQuery());
+        boolQuery.filter(queries);
     }
 
     private void addAgg(String agg, SearchRequest.Builder request) {
