@@ -49,6 +49,8 @@ public class QueryController {
             "separated by commas.")
     @Parameter(name = "agg", description = "The field you want to aggregate. It has to match exactly.")
     @Parameter(name = "gte", description = "A number for the average rating to be greater than or equal.")
+    @Parameter(name = "from", description = "Specifies the number of hits that are going to be skipped.")
+    @Parameter(name = "size", description = "Specifies the size of the hits going to be returned.")
     @ApiResponse(responseCode = "200", description = "Documents obtained", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "400", description = "Bad request", content =
@@ -64,7 +66,6 @@ public class QueryController {
             @RequestParam(required = false) Optional<String>gte,
             @RequestParam(required = false) Optional<Integer> from,
             @RequestParam(required = false) Optional<Integer> size){
-
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         from.ifPresent(request::from);
