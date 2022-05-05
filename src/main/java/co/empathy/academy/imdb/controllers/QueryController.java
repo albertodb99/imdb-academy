@@ -78,7 +78,7 @@ public class QueryController {
         gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
         removeAdultFilms(boolQuery);
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
-        addSort(request);
+        //addSort(request);
         SearchResponse<JsonData> response = createResponse(request.build());
 
         return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
@@ -88,12 +88,17 @@ public class QueryController {
         return QueryBuilders
                 .functionScore()
                 .query(boolQuery)
-                .scoreMode(FunctionScoreMode.Sum)
                 .functions(FunctionScoreBuilders
                         .fieldValueFactor()
                         .field("numVotes")
                         .build()
-                        ._toFunctionScore())
+                        ._toFunctionScore(),
+                        FunctionScoreBuilders
+                                .fieldValueFactor()
+                                .field("averageRating")
+                                .build()
+                                ._toFunctionScore())
+                .scoreMode(FunctionScoreMode.Avg)
                 .build();
     }
 
@@ -113,13 +118,6 @@ public class QueryController {
                         .caseInsensitive(true)
                         .value(filmTitle)
                         .boost(9.0f)
-                        .build().
-                        _toQuery(),
-                QueryBuilders
-                        .range()
-                        .field("numVotes")
-                        .gt(JsonData.of(500000))
-                        .boost(5.0f)
                         .build().
                         _toQuery(),
                 QueryBuilders
