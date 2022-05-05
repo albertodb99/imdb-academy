@@ -4,9 +4,7 @@ import co.elastic.clients.elasticsearch._types.*;
 import co.elastic.clients.elasticsearch._types.aggregations.AggregationBuilders;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -70,27 +68,76 @@ public class QueryController {
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         from.ifPresent(request::from);
         size.ifPresent(request::size);
-        q.ifPresent(s -> addSearch(s, boolQuery));
+        if(q.isPresent()){
+            addSearch(q.get(), boolQuery);
+            boostQueries(boolQuery, q.get());
+        }
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
         gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
         removeAdultFilms(boolQuery);
-        request.query(boolQuery.build()._toQuery());
+        request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
         addSort(request);
         SearchResponse<JsonData> response = createResponse(request.build());
 
         return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
     }
 
+    private FunctionScoreQuery sumScores(Query boolQuery) {
+        return QueryBuilders
+                .functionScore()
+                .query(boolQuery)
+                .scoreMode(FunctionScoreMode.Sum)
+                .functions(FunctionScoreBuilders
+                        .fieldValueFactor()
+                        .field("numVotes")
+                        .build()
+                        ._toFunctionScore())
+                .build();
+    }
+
+    private void boostQueries(BoolQuery.Builder boolQuery, String filmTitle) {
+        boolQuery.should(
+                QueryBuilders
+                        .term()
+                        .field("primaryTitle.raw")
+                        .caseInsensitive(true)
+                        .value(filmTitle)
+                        .boost(10.0f)
+                        .build().
+                        _toQuery(),
+                QueryBuilders
+                        .term()
+                        .field("originalTitle.raw")
+                        .caseInsensitive(true)
+                        .value(filmTitle)
+                        .boost(9.0f)
+                        .build().
+                        _toQuery(),
+                QueryBuilders
+                        .range()
+                        .field("numVotes")
+                        .gt(JsonData.of(500000))
+                        .boost(5.0f)
+                        .build().
+                        _toQuery(),
+                QueryBuilders
+                        .term()
+                        .field("titleType")
+                        .value("movie")
+                        .boost(5.0f)
+                        .build().
+                        _toQuery()
+        );
+    }
+
     private void addSort(SearchRequest.Builder request) {
         request.sort(new SortOptions
-                .Builder()
-                .field(SortOptionsBuilders
-                    .field()
-                    .field("averageRating")
-                    .order(SortOrder.Desc)
-                    .build())
+                .Builder().score(SortOptionsBuilders
+                        .score()
+                        .order(SortOrder.Desc)
+                        .build())
                 .build());
     }
 

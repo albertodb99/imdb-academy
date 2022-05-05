@@ -171,7 +171,7 @@ public class TsvReader {
                             )
                     )
                     .properties("primaryTitle", second -> second
-                            .text(third -> third.boost(10.0)
+                            .text(third -> third
                                     .analyzer(STANDARD)
                                     .fields("raw", fourth -> fourth
                                             .keyword(fifth -> fifth)
@@ -179,7 +179,7 @@ public class TsvReader {
                             )
                     )
                     .properties("originalTitle", second -> second
-                            .text(third -> third.boost(9.0)
+                            .text(third -> third
                                     .analyzer(STANDARD)
                                     .fields("raw", fourth -> fourth
                                             .keyword(fifth -> fifth)
