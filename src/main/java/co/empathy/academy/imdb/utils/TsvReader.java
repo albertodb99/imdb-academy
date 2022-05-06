@@ -104,7 +104,7 @@ public class TsvReader {
     }
 
     private Map<String, Rating> getRatingsMapFromFile() throws IOException {
-        return Files.readAllLines(Paths.get(ratingsPath))
+        return Files.readAllLines(Paths.get(ratingsPath).toAbsolutePath())
                 .stream()
                 .skip(1)
                 .map(Rating::new)
@@ -112,7 +112,7 @@ public class TsvReader {
     }
 
     private List<String> getFilmsFromFile() throws IOException {
-        return Files.readAllLines(Paths.get(filmsPath));
+        return Files.readAllLines(Paths.get(filmsPath).toAbsolutePath());
     }
 
     private List<Film> getFilmsListFromSubset(List<String> filmsSubSet) {

@@ -78,7 +78,6 @@ public class QueryController {
         gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
         removeAdultFilms(boolQuery);
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
-        //addSort(request);
         SearchResponse<JsonData> response = createResponse(request.build());
 
         return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
@@ -98,7 +97,7 @@ public class QueryController {
                                 .field("averageRating")
                                 .build()
                                 ._toFunctionScore())
-                .scoreMode(FunctionScoreMode.Avg)
+                .scoreMode(FunctionScoreMode.Multiply)
                 .build();
     }
 
@@ -124,19 +123,10 @@ public class QueryController {
                         .term()
                         .field("titleType")
                         .value("movie")
-                        .boost(5.0f)
+                        .boost(9.0f)
                         .build().
                         _toQuery()
         );
-    }
-
-    private void addSort(SearchRequest.Builder request) {
-        request.sort(new SortOptions
-                .Builder().score(SortOptionsBuilders
-                        .score()
-                        .order(SortOrder.Desc)
-                        .build())
-                .build());
     }
 
     private void removeAdultFilms(BoolQuery.Builder boolQuery) {
@@ -184,8 +174,11 @@ public class QueryController {
         List<Query> queries = new ArrayList<>();
         queries.add(QueryBuilders
                 .multiMatch()
-                .fields("primaryTitle", "originalTitle")
+                .fields("primaryTitle", "originalTitle",
+                        "primaryTitle.english", "primaryTitle.raw")
                 .query(q)
+                        .operator(Operator.And)
+                        .tieBreaker(0.5)
                 .build()
                 ._toQuery());
         boolQuery.must(queries);
