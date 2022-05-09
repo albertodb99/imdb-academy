@@ -1,9 +1,14 @@
 package co.empathy.academy.imdb.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class Rating implements Indexable {
 
     private String id;
+    @Getter @Setter
     private double averageRating;
+    @Getter @Setter
     private int numVotes;
 
     private static final int HEADER = 0;
@@ -27,26 +32,6 @@ public class Rating implements Indexable {
     @Override
     public String getId() {
         return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public double getAverageRating() {
-        return averageRating;
-    }
-
-    public void setAverageRating(double averageRating) {
-        this.averageRating = averageRating;
-    }
-
-    public int getNumVotes() {
-        return numVotes;
-    }
-
-    public void setNumVotes(int numVotes) {
-        this.numVotes = numVotes;
     }
 
     @Override

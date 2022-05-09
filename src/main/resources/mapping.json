@@ -1,0 +1,54 @@
+{
+    "properties": {
+      "titleType": {
+        "type": "keyword"
+      },
+      "primaryTitle" : {
+        "type" : "text",
+        "fields" : {
+          "raw" : {
+            "type" : "keyword"
+          },
+          "nGram_analyzer" : {
+            "type" : "text",
+            "analyzer" : "nGram_analyzer"
+          }
+        },
+          "analyzer" : "custom_films_analyzer"
+      },
+      "originalTitle" : {
+        "type" : "text",
+        "fields" : {
+          "raw" : {
+            "type" : "keyword"
+          },
+          "nGram_analyzer" : {
+            "type" : "text",
+            "analyzer" : "nGram_analyzer"
+          }
+        },
+        "analyzer" : "custom_films_analyzer"
+      },
+      "isAdult" : {
+        "type" : "boolean"
+      },
+      "startYear" : {
+        "type" : "integer"
+      },
+      "endYear" : {
+        "type" : "integer"
+      },
+      "runtimeMinutes" : {
+        "type" : "integer"
+      },
+      "genres" : {
+        "type" : "keyword"
+      },
+      "averageRating" : {
+        "type" : "float"
+      },
+      "numVotes" : {
+        "type" : "integer"
+      }
+    }
+}

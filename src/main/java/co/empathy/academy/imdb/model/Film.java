@@ -1,16 +1,28 @@
 package co.empathy.academy.imdb.model;
 
+import lombok.Getter;
+import lombok.Setter;
 public class Film {
 
+    @Getter @Setter
     private String id;
+    @Getter @Setter
     private String titleType;
+    @Getter @Setter
     private String primaryTitle;
+    @Getter @Setter
     private String originalTitle;
+    @Getter @Setter
     private boolean isAdult;
+    @Getter @Setter
     private int startYear;
+    @Getter @Setter
     private int endYear;
+    @Getter @Setter
     private int runtimeMinutes;
+    @Getter @Setter
     private String[] genres;
+    @Getter @Setter
     private Rating rating;
 
     private static final int HEADER = 0;
@@ -21,7 +33,7 @@ public class Film {
     private static final int START_YEAR = 5;
     private static final int END_YEAR = 6;
     private static final int RUNTIME_MINUTES = 7;
-    private static final int GENRES = 8;
+    private static final int GENRES_LIST = 8;
 
     public Film(String toParse){
         String[] parsed = toParse.split("\t");
@@ -33,89 +45,9 @@ public class Film {
         this.startYear = parseStringToInt(parsed[START_YEAR]);
         this.endYear = parseStringToInt(parsed[END_YEAR]);
         this.runtimeMinutes = parseStringToInt(parsed[RUNTIME_MINUTES]);
-        this.genres = parsed[GENRES].split(",");
-        this.rating = null;
+        this.genres = parsed[GENRES_LIST].split(",");
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getTitleType() {
-        return titleType;
-    }
-
-    public void setTitleType(String titleType) {
-        this.titleType = titleType;
-    }
-
-    public String getPrimaryTitle() {
-        return primaryTitle;
-    }
-
-    public void setPrimaryTitle(String primaryTitle) {
-        this.primaryTitle = primaryTitle;
-    }
-
-    public String getOriginalTitle() {
-        return originalTitle;
-    }
-
-    public void setOriginalTitle(String originalTitle) {
-        this.originalTitle = originalTitle;
-    }
-
-    public boolean isAdult() {
-        return isAdult;
-    }
-
-    public void setAdult(boolean adult) {
-        isAdult = adult;
-    }
-
-    public int getStartYear() {
-        return startYear;
-    }
-
-    public void setStartYear(int startYear) {
-        this.startYear = startYear;
-    }
-
-    public int getEndYear() {
-        return endYear;
-    }
-
-    public void setEndYear(int endYear) {
-        this.endYear = endYear;
-    }
-
-    public int getRuntimeMinutes() {
-        return runtimeMinutes;
-    }
-
-    public void setRuntimeMinutes(int runtimeMinutes) {
-        this.runtimeMinutes = runtimeMinutes;
-    }
-
-    public String[] getGenres() {
-        return genres;
-    }
-
-    public void setGenres(String[] genres) {
-        this.genres = genres;
-    }
-
-    public Rating getRating() {
-        return rating;
-    }
-
-    public void setRating(Rating rating) {
-        this.rating = rating;
-    }
 
     /**
      * Method that parses a String to boolean
@@ -140,9 +72,5 @@ public class Film {
             toRet = 0;
         }
         return toRet;
-    }
-
-    public Film getFilm(){
-        return this;
     }
 }

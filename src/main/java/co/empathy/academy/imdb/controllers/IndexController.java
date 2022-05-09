@@ -93,7 +93,7 @@ public class IndexController {
     @PostMapping("/index_documents")
     public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
         ratingsPathOpt.ifPresentOrElse(
-                ratingsPath -> new Thread(new TsvReader(filmsPath, ratingsPath)::indexFile).start(),
+                ratingsPath -> new Thread(new TsvReader(filmsPath,ratingsPath)::indexFile).start(),
                 () -> new Thread(new TsvReader(filmsPath)::indexFile).start()
         );
     }

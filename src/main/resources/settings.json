@@ -1,0 +1,54 @@
+{
+  "settings" : {
+    "analysis" : {
+      "analyzer" : {
+        "nGram_analyzer" : {
+          "type" : "custom",
+          "tokenizer" : "standard",
+          "filter" : [
+            "lowercase", "shingle"
+          ]
+        },
+        "custom_films_analyzer": {
+          "type": "custom",
+          "tokenizer" : "whitespace",
+          "filter" : [
+            "asciifolding",
+            "lowercase",
+            "synonym_numbers",
+            "custom_delimiter",
+            "trim"
+          ]
+        }
+      },
+      "filter" : {
+        "shingle" : {
+          "type" : "shingle",
+          "min_shingle_size" : 2,
+          "max_shingle_size" : 3,
+          "output_unigrams" : true
+        },
+        "custom_delimiter" : {
+          "type": "word_delimiter_graph",
+          "catenate_all" : true
+        },
+        "synonym_numbers" : {
+          "type" : "synonym",
+          "synonyms" : [
+            "i, 1",
+            "ii, 2",
+            "iii, 3",
+            "iv, 4",
+            "v, 5",
+            "vi, 6",
+            "vii, 7",
+            "viii, 8",
+            "ix, 9",
+            "x, 10",
+            "eleven, 11"
+          ]
+        }
+      }
+    }
+  }
+}
