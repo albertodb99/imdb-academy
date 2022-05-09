@@ -127,6 +127,13 @@ public class QueryController {
                         .value("movie")
                         .boost(9.0f)
                         .build().
+                        _toQuery(),
+                QueryBuilders
+                        .term()
+                        .field("titleType")
+                        .value("tvMovie")
+                        .boost(5.0f)
+                        .build().
                         _toQuery()
         );
     }
