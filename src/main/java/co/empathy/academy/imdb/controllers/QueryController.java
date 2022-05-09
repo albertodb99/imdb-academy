@@ -62,6 +62,7 @@ public class QueryController {
             @RequestParam(required = false) Optional<List<String>> genre,
             @RequestParam(required = false) Optional<String>agg,
             @RequestParam(required = false) Optional<String>gte,
+            @RequestParam(required = false) Optional<String>lt,
             @RequestParam(required = false) Optional<Integer> from,
             @RequestParam(required = false) Optional<Integer> size){
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
@@ -75,7 +76,8 @@ public class QueryController {
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
-        gte.ifPresent(s -> addRangeFilter(s, "averageRating", boolQuery));
+        gte.ifPresent(s -> addGreaterThanOrEqualFilter(s, boolQuery));
+        lt.ifPresent(s -> addLessThanFilter(s, boolQuery));
         removeAdultFilms(boolQuery);
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
@@ -160,13 +162,23 @@ public class QueryController {
         boolQuery.filter(queries);
     }
 
-    private void addRangeFilter(String string, String field, BoolQuery.Builder boolQuery) {
+    private void addGreaterThanOrEqualFilter(String string, BoolQuery.Builder boolQuery) {
         List<Query> queries = new ArrayList<>();
             queries.add(QueryBuilders
                     .range()
-                    .field(field)
+                    .field("averageRating")
                     .gte(JsonData.of(string))
                     .build()._toQuery());
+        boolQuery.filter(queries);
+    }
+
+    private void addLessThanFilter(String string, BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(QueryBuilders
+                .range()
+                .field("averageRating")
+                .lt(JsonData.of(string))
+                .build()._toQuery());
         boolQuery.filter(queries);
     }
 
