@@ -73,4 +73,12 @@ public class Film {
         }
         return toRet;
     }
+
+    public Film getIdentity(){
+        return this;
+    }
+
+    public int getIdToCompare() {
+        return Integer.parseInt(this.id.split("tt")[1]);
+    }
 }

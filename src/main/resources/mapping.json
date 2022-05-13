@@ -49,6 +49,82 @@
       },
       "numVotes" : {
         "type" : "integer"
+      },
+      "akas": {
+        "type": "nested",
+        "properties": {
+          "titleId": {
+            "type" : "string"
+          },
+          "title": {
+            "type" : "string"
+          },
+          "region": {
+            "type" : "string"
+          },
+          "isOriginalTitle": {
+            "type" : "boolean"
+          },
+          "language": {
+            "type" : "string"
+          }
+        }
+      },
+      "crew": {
+        "type": "nested",
+        "properties": {
+          "tconst": {
+            "type" : "string"
+          },
+          "directors": {
+            "type" : "string"
+          }
+        }
+      },
+      "episodes": {
+        "type": "nested",
+        "properties": {
+          "tconst": {
+            "type" : "string"
+          },
+          "parentTconst": {
+            "type" : "string"
+          },
+          "seasonNumber": {
+            "type" : "integer"
+          },
+          "episodeNumber": {
+            "type" : "integer"
+          }
+        }
+      },
+      "principals": {
+        "type": "nested",
+        "properties": {
+          "tconst": {
+            "type" : "string"
+          },
+          "nconst": {
+            "type" : "string"
+          },
+          "characters": {
+            "type" : "string"
+          }
+        }
+      },
+      "namebasics": {
+        "type": "nested",
+        "properties": {
+          "nconst": {
+            "type" : "string"
+          },
+          "primaryName": {
+            "type" : "string"
+          },
+          "knownForTitles": {
+            "type" : "string"
+          }
+        }
       }
     }
 }
