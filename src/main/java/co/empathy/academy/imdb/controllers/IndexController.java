@@ -84,18 +84,30 @@ public class IndexController {
     @Operation(summary = "Insert documents in the index films")
     @Parameter(name = "filmsPath", description = "The path of the films .tsv that has to be indexed",
             required = true)
-    @Parameter(name = "ratingsPathOpt", description = "The path of the ratings of the films .tsv that has to be indexed",
-            required = false)
+    @Parameter(name = "ratingsPath", description = "The path of the ratings of the films .tsv that has to be indexed",
+            required = true)
+    @Parameter(name = "akasPath", description = "The path of the akas of the films .tsv that has to be indexed",
+            required = true)
+    @Parameter(name = "crewPath", description = "The path of the crew of the films .tsv that has to be indexed",
+            required = true)
+    @Parameter(name = "episodesPath", description = "The path of the episodes of the series .tsv that has to be indexed",
+            required = true)
+    @Parameter(name = "principalsPath", description = "The path of the principals of the films .tsv that has to be indexed",
+            required = true)
+    @Parameter(name = "nameBasicsPath", description = "The path of the names of the actors of the films .tsv that has to be indexed",
+            required = true)
     @ApiResponse(responseCode = "200", description = "Documents indexed", content =
             { @Content(mediaType = "application/json")})
     @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
             { @Content(mediaType = "application/json")})
     @PostMapping("/index_documents")
-    public void insertIndex(@RequestParam String filmsPath, @RequestParam Optional<String> ratingsPathOpt ){
-        ratingsPathOpt.ifPresentOrElse(
-                ratingsPath -> new Thread(new TsvReader(filmsPath,ratingsPath)::indexFile).start(),
-                () -> new Thread(new TsvReader(filmsPath)::indexFile).start()
-        );
+    public void insertIndex(@RequestParam String filmsPath, @RequestParam String ratingsPath,
+                            @RequestParam String akasPath, @RequestParam String crewPath,
+                            @RequestParam String episodesPath, @RequestParam String principalsPath,
+                            @RequestParam String nameBasicsPath
+                            ){
+        new Thread(() -> new TsvReader().indexFile(filmsPath, ratingsPath, akasPath, crewPath, episodesPath,
+                principalsPath, nameBasicsPath)).start();
     }
 
 }

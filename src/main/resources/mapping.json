@@ -53,76 +53,56 @@
       "akas": {
         "type": "nested",
         "properties": {
-          "titleId": {
-            "type" : "string"
-          },
           "title": {
-            "type" : "string"
+            "type": "text"
           },
           "region": {
-            "type" : "string"
-          },
-          "isOriginalTitle": {
-            "type" : "boolean"
+            "type": "text"
           },
           "language": {
-            "type" : "string"
+            "type": "text"
+          },
+          "isOriginalTitle": {
+            "type": "boolean"
           }
         }
       },
-      "crew": {
+      "directors": {
         "type": "nested",
         "properties": {
-          "tconst": {
-            "type" : "string"
+          "nconst": {
+            "type": "text"
           },
-          "directors": {
-            "type" : "string"
-          }
-        }
-      },
-      "episodes": {
-        "type": "nested",
-        "properties": {
-          "tconst": {
-            "type" : "string"
+          "primaryName": {
+            "type": "text"
           },
-          "parentTconst": {
-            "type" : "string"
-          },
-          "seasonNumber": {
-            "type" : "integer"
-          },
-          "episodeNumber": {
-            "type" : "integer"
+          "knownForTitles": {
+            "type": "text"
           }
         }
       },
       "principals": {
         "type": "nested",
         "properties": {
-          "tconst": {
-            "type" : "string"
-          },
-          "nconst": {
-            "type" : "string"
+          "name": {
+            "type": "nested",
+            "properties": {
+              "nconst": {
+                "type": "text"
+              },
+              "primaryTitle": {
+                "type": "text"
+              },
+              "knownForTitles": {
+                "type": "text"
+              }
+            }
           },
           "characters": {
-            "type" : "string"
-          }
-        }
-      },
-      "namebasics": {
-        "type": "nested",
-        "properties": {
-          "nconst": {
-            "type" : "string"
+            "type": "text"
           },
-          "primaryName": {
-            "type" : "string"
-          },
-          "knownForTitles": {
-            "type" : "string"
+          "category": {
+            "type": "text"
           }
         }
       }

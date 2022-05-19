@@ -1,30 +1,16 @@
 package co.empathy.academy.imdb.model;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObjectBuilder;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Getter
+@Setter
 public class Film {
-
-    @Getter @Setter
-    private String id;
-    @Getter @Setter
-    private String titleType;
-    @Getter @Setter
-    private String primaryTitle;
-    @Getter @Setter
-    private String originalTitle;
-    @Getter @Setter
-    private boolean isAdult;
-    @Getter @Setter
-    private int startYear;
-    @Getter @Setter
-    private int endYear;
-    @Getter @Setter
-    private int runtimeMinutes;
-    @Getter @Setter
-    private String[] genres;
-    @Getter @Setter
-    private Rating rating;
-
     private static final int HEADER = 0;
     private static final int TITLE_TYPE = 1;
     private static final int PRIMARY_TITLE = 2;
@@ -34,6 +20,19 @@ public class Film {
     private static final int END_YEAR = 6;
     private static final int RUNTIME_MINUTES = 7;
     private static final int GENRES_LIST = 8;
+
+    private String id;
+    private String titleType;
+    private String primaryTitle;
+    private String originalTitle;
+    private boolean isAdult;
+    private int startYear;
+    private int endYear;
+    private int runtimeMinutes;
+    private String[] genres;
+    private Rating rating;
+
+    private Film(){}
 
     public Film(String toParse){
         String[] parsed = toParse.split("\t");
@@ -48,13 +47,31 @@ public class Film {
         this.genres = parsed[GENRES_LIST].split(",");
     }
 
+    public static void addFilm(String line, JsonObjectBuilder builder, List<String> headers) {
+        String[] fields = line.split("\t");
+
+        var arrayBuilder = Json.createArrayBuilder();
+
+        Arrays.stream(fields[GENRES_LIST].split(",")).forEach(arrayBuilder::add);
+
+        builder.add(headers.get(HEADER), fields[HEADER])
+                .add(headers.get(TITLE_TYPE), fields[TITLE_TYPE])
+                .add(headers.get(PRIMARY_TITLE), fields[PRIMARY_TITLE])
+                .add(headers.get(ORIGINAL_TITLE), fields[ORIGINAL_TITLE])
+                .add(headers.get(IS_ADULT), parseStringToBoolean(fields[IS_ADULT]))
+                .add(headers.get(START_YEAR), parseStringToInt(fields[START_YEAR]))
+                .add(headers.get(END_YEAR), parseStringToInt(fields[END_YEAR]))
+                .add(headers.get(RUNTIME_MINUTES), parseStringToInt(fields[RUNTIME_MINUTES]))
+                .add(headers.get(GENRES_LIST), arrayBuilder.build());
+    }
+
 
     /**
      * Method that parses a String to boolean
      * @param line is the string we want to parse
      * @return the boolean converted
      */
-    private boolean parseStringToBoolean(String line) {
+    private static boolean parseStringToBoolean(String line) {
         return !line.equals("0");
     }
 
@@ -64,7 +81,7 @@ public class Film {
      * @param line is the String we want to parse
      * @return the string parsed to an integer
      */
-    private int parseStringToInt(String line) {
+    private static int parseStringToInt(String line) {
         int toRet;
         try {
             toRet = Integer.parseInt(line);

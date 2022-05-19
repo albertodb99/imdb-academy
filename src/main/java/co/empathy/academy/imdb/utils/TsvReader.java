@@ -1,5 +1,6 @@
 package co.empathy.academy.imdb.utils;
 
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
 import co.elastic.clients.elasticsearch.indices.CloseIndexRequest;
 import co.elastic.clients.elasticsearch.indices.OpenRequest;
@@ -8,11 +9,14 @@ import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.empathy.academy.imdb.exceptions.ElasticsearchConnectionException;
 import co.empathy.academy.imdb.model.Film;
 import co.empathy.academy.imdb.model.Rating;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -24,55 +28,29 @@ public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
     private static final int BATCH_SIZE = 100000;
+    private static final Logger logger = LoggerFactory.getLogger(TsvReader.class);
     private static final String FILMS = "films";
 
-    private String filmsPath;
-    private String ratingsPath;
-
-    public TsvReader(String filmsPath, String ratingsPath){
-        this.filmsPath = filmsPath;
-        this.ratingsPath = ratingsPath;
-    }
-
-    public TsvReader(String filmsPath){
-        this.filmsPath = filmsPath;
-    }
-
-    /**
-     * Method to index a file into an elasticsearch container.
-     */
-    public void indexFile() {
-        //Now we read all the lines of the films file.
-        List<String> films;
+    public void indexFile(String filmsPath, String ratingsPath, String akasPath, String crewPath, String episodesPath, String principalPath, String nameBasicsPath) {
         try {
+            logger.info("Adding mapping and indexing");
             insertMappingAndSettings();
-            films = getFilmsFromFile();
-            addFilmsToDatabaseInRanges(films);
-        } catch (IOException e) {
-            e.printStackTrace();
+            logger.info("Finished mapping and indexing");
+            logger.info("Started indexing");
+            var batchReader = new BatchReader(filmsPath, ratingsPath, akasPath, crewPath, episodesPath, principalPath, nameBasicsPath, BATCH_SIZE);
+
+            while(!batchReader.hasFinished()) {
+                List<JsonReference> batch = batchReader.getBatch();
+                createBulkOperationsFromFilms(batch);
+            }
+
+            logger.info("Indexed");
+            batchReader.close();
+        } catch(IOException | ElasticsearchException e) {
+            throw new ElasticsearchConnectionException("There was a problem processing your request", e);
         }
-
     }
 
-    private void addFilmsToDatabaseInRanges(List<String> films) throws IOException {
-        Map<String, Rating> ratings;
-        int startingRange = 0;
-        int endRange = BATCH_SIZE;
-        ratings = getRatingsMapFromFile(ratingsPath);
-        do {
-            if (films.size() - endRange < BATCH_SIZE) {
-                endRange = films.size() - 1;
-            }
-            List<Film> filmsList = getFilmsListFromSubset(films.subList(startingRange, endRange));
-            mergeFilmsAndRatings(filmsList, ratings);
-            List<JsonReference> filmsParsed = parseFilmsFromList(filmsList);
-            createBulkOperationsFromFilms(filmsParsed);
-            if (endRange != films.size() - 1) {
-                startingRange += BATCH_SIZE;
-                endRange += BATCH_SIZE;
-            }
-        } while (endRange < films.size() - 1);
-    }
 
     private void createBulkOperationsFromFilms(List<JsonReference> filmsParsed) throws IOException {
         List<BulkOperation> operations = new ArrayList<>();
@@ -85,75 +63,14 @@ public class TsvReader {
     private BulkOperation createBulkOperationFromFilm(JsonReference film) {
         IndexOperation<Object> indexOperation = new IndexOperation.Builder<>()
                 .index(FILMS)
-                .document(film.getJson())
-                .id(film.getId())
+                .document(film.json())
+                .id(film.id())
                 .build();
         return new BulkOperation.Builder()
                 .index(indexOperation)
                 .build();
     }
 
-    private List<JsonReference> parseFilmsFromList(List<Film> filmsList) {
-        return filmsList
-                .stream()
-                .map(this::parseStringToJson)
-                .toList();
-    }
-
-    private void mergeFilmsAndRatings(List<Film> filmsList, Map<String, Rating> ratingsMap) {
-        for (Film f : filmsList) {
-            Rating r = ratingsMap.get(f.getId());
-            if (r != null) {
-                r.copyToFilm(f);
-            }
-        }
-    }
-
-    private Map<String, Rating> getRatingsMapFromFile(String ratingsPath) throws IOException {
-        return Files.readAllLines(Paths.get(ratingsPath).toAbsolutePath())
-                .stream()
-                .skip(1)
-                .map(Rating::new)
-                .collect(Collectors.toMap(Rating::getId, Rating::getIdentity));
-    }
-
-    private List<String> getFilmsFromFile() throws IOException {
-        return Files.readAllLines(Paths.get(filmsPath).toAbsolutePath());
-    }
-
-    private List<Film> getFilmsListFromSubset(List<String> filmsSubSet) {
-        return filmsSubSet
-                .stream()
-                .skip(1)
-                .map(Film::new)
-                .toList();
-    }
-
-    /**
-     * Method that gets an array of strings and convert them to the JSON
-     * structure that we need.
-     *
-     * @param film is the array of strings we want to parse to JSON
-     * @return the JsonObject formatted.
-     */
-    private JsonReference parseStringToJson(Film film) {
-        JsonArrayBuilder array = Json.createArrayBuilder();
-        Arrays.stream(film.getGenres()).forEach(array::add);
-        JsonObjectBuilder json = Json.createObjectBuilder()
-                .add("titleType", film.getTitleType())
-                .add("primaryTitle", film.getPrimaryTitle())
-                .add("originalTitle", film.getOriginalTitle())
-                .add("isAdult", film.isAdult())
-                .add("startYear", film.getStartYear())
-                .add("endYear", film.getEndYear())
-                .add("runtimeMinutes", film.getRuntimeMinutes())
-                .add("genres", array.build());
-        if (film.getRating() == null)
-            film.setRating(new Rating(film));
-        json.add("averageRating", film.getRating().getAverageRating());
-        json.add("numVotes", film.getRating().getNumVotes());
-        return new JsonReference(film.getId(), json.build());
-    }
 
     /**
      * Method that receives a Map and do a BulkRequest of the operations contained

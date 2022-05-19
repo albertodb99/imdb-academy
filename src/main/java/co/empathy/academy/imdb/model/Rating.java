@@ -1,7 +1,10 @@
 package co.empathy.academy.imdb.model;
 
+import jakarta.json.JsonObjectBuilder;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 public class Rating implements Indexable {
 
@@ -15,6 +18,7 @@ public class Rating implements Indexable {
     private static final int AVERAGE_RATING = 1;
     private static final int NUM_VOTES = 2;
 
+    private Rating(){}
 
     public Rating(String rating) {
         String[] parsed = rating.split("\t");
@@ -29,6 +33,13 @@ public class Rating implements Indexable {
         this.numVotes = 0;
     }
 
+    public static void addRating(String line, JsonObjectBuilder builder, List<String> headers) {
+        String[] fields = line.split("\t");
+
+        builder.add(headers.get(AVERAGE_RATING), parseStringToDouble(fields[AVERAGE_RATING]))
+                .add(headers.get(NUM_VOTES), parseStringToInt(fields[NUM_VOTES]));
+    }
+
     @Override
     public String getId() {
         return id;
@@ -39,7 +50,7 @@ public class Rating implements Indexable {
         f.setRating(this);
     }
 
-    private int parseStringToInt(String line) {
+    private static int parseStringToInt(String line) {
         int toRet;
         try {
             toRet = Integer.parseInt(line);
@@ -49,7 +60,7 @@ public class Rating implements Indexable {
         return toRet;
     }
 
-    private double parseStringToDouble(String line) {
+    private static double parseStringToDouble(String line) {
         double toRet;
         try {
             toRet = Double.parseDouble(line);
