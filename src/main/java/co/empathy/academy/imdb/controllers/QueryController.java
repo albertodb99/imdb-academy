@@ -164,6 +164,7 @@ public class QueryController {
         TermsAggregation termsAggregation = AggregationBuilders
                 .terms()
                 .field(agg)
+                .size(1000)
                 .build();
         request.aggregations("agg_" + agg, termsAggregation._toAggregation());
     }
