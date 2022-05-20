@@ -87,6 +87,26 @@ public class QueryController {
         return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
     }
 
+    @Operation(summary = "Retrieves the document with the id specified")
+    @Parameter(name = "id", description = "Id of the document, it is mandatory")
+    @ApiResponse(responseCode = "200", description = "Document obtained", content =
+            { @Content(mediaType = "application/json")})
+    @ApiResponse(responseCode = "400", description = "Bad request", content =
+            { @Content(mediaType = "application/json")})
+    @ApiResponse(responseCode = "500", description = "Internal Server Error", content =
+            { @Content(mediaType = "application/json")})
+    @GetMapping("/id_search")
+    public String idSearch(
+            @RequestParam(required = true) String id){
+        SearchRequest.Builder request = new SearchRequest.Builder()
+                .index("films");
+        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
+        addSearchById(id, boolQuery);
+        request.query(boolQuery.build()._toQuery());
+        SearchResponse<JsonData> response = createResponse(request.build());
+        return parseHits(response);
+    }
+
     private FunctionScoreQuery sumScores(Query boolQuery) {
         return QueryBuilders
                 .functionScore()
@@ -212,6 +232,17 @@ public class QueryController {
                 .query(q)
                         .operator(Operator.And)
                         .tieBreaker(0.5)
+                .build()
+                ._toQuery());
+        boolQuery.must(queries);
+    }
+
+    private void addSearchById(String q, BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(QueryBuilders
+                .match()
+                .field("_id")
+                .query(q)
                 .build()
                 ._toQuery());
         boolQuery.must(queries);
