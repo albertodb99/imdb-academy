@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.search.*;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -72,13 +73,14 @@ public class QueryController {
         if(q.isPresent()){
             addSearch(q.get(), boolQuery);
             boostQueries(boolQuery, q.get());
+            //addTermSuggestions(q.get(), request);
+            //addPhraseSuggestions(q.get(), request);
         }
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
         gte.ifPresent(s -> addGreaterThanOrEqualFilter(s, boolQuery));
         lt.ifPresent(s -> addLessThanFilter(s, boolQuery));
-        removeAdultFilms(boolQuery);
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
 
@@ -138,22 +140,34 @@ public class QueryController {
         );
     }
 
-    private void removeAdultFilms(BoolQuery.Builder boolQuery) {
-        List<Query> queries = new ArrayList<>();
-        queries.add(QueryBuilders
-                .term()
-                .field("isAdult")
-                .value(false)
-                .build()._toQuery());
-        boolQuery.filter(queries);
-    }
-
     private void addAgg(String agg, SearchRequest.Builder request) {
         TermsAggregation termsAggregation = AggregationBuilders
                 .terms()
                 .field(agg)
                 .build();
         request.aggregations("agg_" + agg, termsAggregation._toAggregation());
+    }
+
+    private void addPhraseSuggestions(String q,SearchRequest.Builder request){
+        PhraseSuggester phraseSuggester = new PhraseSuggester.Builder()
+                .field("primaryTitle.nGram_analyzer")
+                .text(q)
+                .gramSize(3).build();
+        Suggester suggester = new Suggester.Builder()
+                .suggesters("phraseSuggester", phraseSuggester._toFieldSuggester())
+                .build();
+        request.suggest(suggester);
+    }
+
+    private void addTermSuggestions(String q,SearchRequest.Builder request){
+        TermSuggester termSuggester = new TermSuggester.Builder()
+                .field("primaryTitle")
+                .text(q)
+                .build();
+        Suggester suggester = new Suggester.Builder()
+                .suggesters("termSuggester", termSuggester._toFieldSuggester())
+                .build();
+        request.suggest(suggester);
     }
 
     private void addFilter(List<String> strings, String field, BoolQuery.Builder boolQuery) {

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class TsvReader {
     static ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
-    private static final int BATCH_SIZE = 100000;
+    private static final int BATCH_SIZE = 25000;
     private static final Logger logger = LoggerFactory.getLogger(TsvReader.class);
     private static final String FILMS = "films";
 
