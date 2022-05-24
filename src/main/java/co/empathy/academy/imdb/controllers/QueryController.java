@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 @RequestMapping("/api")
 public class QueryController {
     private static final String AVERAGE_RATING = "averageRating";
+    private static final String TITLE_TYPE = "titleType";
 
     ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
@@ -76,7 +77,7 @@ public class QueryController {
         size.ifPresent(request::size);
         addSearch(q, boolQuery);
         boostQueries(boolQuery, q);
-        type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
+        type.ifPresent(strings -> addFilter(strings, TITLE_TYPE, boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
         gte.ifPresent(s -> addGreaterThanOrEqualFilter(s, boolQuery));
@@ -150,14 +151,14 @@ public class QueryController {
                         _toQuery(),
                 QueryBuilders
                         .term()
-                        .field("titleType")
+                        .field(TITLE_TYPE)
                         .value("movie")
                         .boost(9.0f)
                         .build().
                         _toQuery(),
                 QueryBuilders
                         .term()
-                        .field("titleType")
+                        .field(TITLE_TYPE)
                         .value("tvMovie")
                         .boost(5.0f)
                         .build().
