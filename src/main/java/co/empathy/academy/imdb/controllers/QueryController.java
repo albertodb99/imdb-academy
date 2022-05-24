@@ -48,6 +48,8 @@ public class QueryController {
             "separated by commas.")
     @Parameter(name = "agg", description = "The field you want to aggregate. It has to match exactly.")
     @Parameter(name = "gte", description = "A number for the average rating to be greater than or equal.")
+    @Parameter(name = "lt", description = "A number for the average rating to be less than.")
+    @Parameter(name = "directorId", description = "Id of the director whose films you want to search.")
     @Parameter(name = "from", description = "Specifies the number of hits that are going to be skipped.")
     @Parameter(name = "size", description = "Specifies the size of the hits going to be returned.")
     @ApiResponse(responseCode = "200", description = "Documents obtained", content =
@@ -64,6 +66,7 @@ public class QueryController {
             @RequestParam(required = false) Optional<String>agg,
             @RequestParam(required = false) Optional<String>gte,
             @RequestParam(required = false) Optional<String>lt,
+            @RequestParam(required = false) Optional<String> directorId,
             @RequestParam(required = false) Optional<Integer> from,
             @RequestParam(required = false) Optional<Integer> size){
         SearchRequest.Builder request = new SearchRequest.Builder().index("films");
@@ -81,6 +84,7 @@ public class QueryController {
         agg.ifPresent(s -> addAgg(s, request));
         gte.ifPresent(s -> addGreaterThanOrEqualFilter(s, boolQuery));
         lt.ifPresent(s -> addLessThanFilter(s, boolQuery));
+        directorId.ifPresent(s -> addDirectorFilter(s, boolQuery));
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
 
@@ -201,6 +205,24 @@ public class QueryController {
                     .build()
                     ._toQuery());
         }
+        boolQuery.filter(queries);
+    }
+
+    private void addDirectorFilter(String directorId, BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(
+                QueryBuilders
+                        .nested()
+                        .path("directors")
+                        .query(QueryBuilders
+                                .match()
+                                .field("directors.nconst")
+                                .query(directorId)
+                                .build()
+                                ._toQuery())
+                        .build()
+                        ._toQuery()
+        );
         boolQuery.filter(queries);
     }
 
