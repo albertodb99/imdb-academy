@@ -6,7 +6,6 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.search.*;
 import co.empathy.academy.imdb.client.ClientCustomConfiguration;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -21,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 @RestController
 @RequestMapping("/api")
 public class QueryController {
+    private static final String AVERAGE_RATING = "averageRating";
 
     ElasticsearchClient client = new ClientCustomConfiguration().getElasticsearchCustomClient();
 
@@ -60,7 +61,7 @@ public class QueryController {
             { @Content(mediaType = "application/json")})
     @GetMapping("/search")
     public String search(
-            @RequestParam(required = false) Optional<String> q,
+            @RequestParam(required = true, defaultValue = "") String q,
             @RequestParam(required = false) Optional<List<String>> type,
             @RequestParam(required = false) Optional<List<String>> genre,
             @RequestParam(required = false) Optional<String>agg,
@@ -73,12 +74,8 @@ public class QueryController {
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         from.ifPresent(request::from);
         size.ifPresent(request::size);
-        if(q.isPresent()){
-            addSearch(q.get(), boolQuery);
-            boostQueries(boolQuery, q.get());
-            //addTermSuggestions(q.get(), request);
-            //addPhraseSuggestions(q.get(), request);
-        }
+        addSearch(q, boolQuery);
+        boostQueries(boolQuery, q);
         type.ifPresent(strings -> addFilter(strings, "titleType", boolQuery));
         genre.ifPresent(strings -> addFilter(strings, "genres", boolQuery));
         agg.ifPresent(s -> addAgg(s, request));
@@ -88,7 +85,11 @@ public class QueryController {
         request.query(sumScores(boolQuery.build()._toQuery())._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
 
-        return agg.isPresent() ? parseAggregations("agg_" + agg.get(), response) : parseHits(response);
+        if(response.hits().hits().isEmpty()){
+            return SuggestionSearch.run(q);
+        }else{
+            return getResultsParsed(response, agg.orElse(null));
+        }
     }
 
     @Operation(summary = "Retrieves the document with the id specified")
@@ -108,7 +109,7 @@ public class QueryController {
         addSearchById(id, boolQuery);
         request.query(boolQuery.build()._toQuery());
         SearchResponse<JsonData> response = createResponse(request.build());
-        return parseHits(response);
+        return getResultsParsed(response, null);
     }
 
     private FunctionScoreQuery sumScores(Query boolQuery) {
@@ -122,7 +123,7 @@ public class QueryController {
                         ._toFunctionScore(),
                         FunctionScoreBuilders
                                 .fieldValueFactor()
-                                .field("averageRating")
+                                .field(AVERAGE_RATING)
                                 .build()
                                 ._toFunctionScore())
                 .scoreMode(FunctionScoreMode.Multiply)
@@ -173,27 +174,6 @@ public class QueryController {
         request.aggregations("agg_" + agg, termsAggregation._toAggregation());
     }
 
-    private void addPhraseSuggestions(String q,SearchRequest.Builder request){
-        PhraseSuggester phraseSuggester = new PhraseSuggester.Builder()
-                .field("primaryTitle.nGram_analyzer")
-                .text(q)
-                .gramSize(3).build();
-        Suggester suggester = new Suggester.Builder()
-                .suggesters("phraseSuggester", phraseSuggester._toFieldSuggester())
-                .build();
-        request.suggest(suggester);
-    }
-
-    private void addTermSuggestions(String q,SearchRequest.Builder request){
-        TermSuggester termSuggester = new TermSuggester.Builder()
-                .field("primaryTitle")
-                .text(q)
-                .build();
-        Suggester suggester = new Suggester.Builder()
-                .suggesters("termSuggester", termSuggester._toFieldSuggester())
-                .build();
-        request.suggest(suggester);
-    }
 
     private void addFilter(List<String> strings, String field, BoolQuery.Builder boolQuery) {
         List<Query> queries = new ArrayList<>();
@@ -230,7 +210,7 @@ public class QueryController {
         List<Query> queries = new ArrayList<>();
             queries.add(QueryBuilders
                     .range()
-                    .field("averageRating")
+                    .field(AVERAGE_RATING)
                     .gte(JsonData.of(string))
                     .build()._toQuery());
         boolQuery.filter(queries);
@@ -240,21 +220,38 @@ public class QueryController {
         List<Query> queries = new ArrayList<>();
         queries.add(QueryBuilders
                 .range()
-                .field("averageRating")
+                .field(AVERAGE_RATING)
                 .lt(JsonData.of(string))
                 .build()._toQuery());
         boolQuery.filter(queries);
     }
 
     private void addSearch(String q, BoolQuery.Builder boolQuery) {
+        if(q.isEmpty()){
+            addMatchAllQuery(boolQuery);
+        }else{
+            addSearchWithQuery(q, boolQuery);
+        }
+    }
+
+    private void addMatchAllQuery(BoolQuery.Builder boolQuery) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(QueryBuilders
+                .matchAll()
+                .build()
+                ._toQuery());
+        boolQuery.must(queries);
+    }
+
+    private void addSearchWithQuery(String q, BoolQuery.Builder boolQuery) {
         List<Query> queries = new ArrayList<>();
         queries.add(QueryBuilders
                 .multiMatch()
                 .fields("primaryTitle", "originalTitle",
                         "primaryTitle.english", "primaryTitle.raw")
                 .query(q)
-                        .operator(Operator.And)
-                        .tieBreaker(0.5)
+                .operator(Operator.And)
+                .tieBreaker(0.5)
                 .build()
                 ._toQuery());
         boolQuery.must(queries);
@@ -271,13 +268,15 @@ public class QueryController {
         boolQuery.must(queries);
     }
 
-    private String parseHits(SearchResponse<JsonData> response) {
-        return response.hits().hits().stream().filter(x -> x.source() != null).map(x ->
+    private JsonArrayBuilder parseHits(SearchResponse<JsonData> response) {
+        JsonArrayBuilder hits = Json.createArrayBuilder();
+        response.hits().hits().stream().filter(x -> x.source() != null).map(x ->
                 Json.createObjectBuilder()
                         .add("id", x.id())
                         .add("source", x.source().toJson())
                         .build()
-        ).toList().toString();
+        ).toList().forEach(hits::add);
+        return hits;
     }
 
     private String parseAggregations(String aggName, SearchResponse<JsonData> response){
@@ -299,6 +298,16 @@ public class QueryController {
         jsonObjectStream.forEach(arrayBuilder::add);
 
         return arrayBuilder.build().toString();
+    }
+
+    private String getResultsParsed(SearchResponse<JsonData> response, String agg) {
+        JsonObjectBuilder result = Json.createObjectBuilder();
+        result.add("hits", parseHits(response));
+
+        if(agg != null)
+            result.add("aggs", parseAggregations(agg, response));
+
+        return result.build().toString();
     }
 
     private SearchResponse<JsonData> createResponse(SearchRequest request){
