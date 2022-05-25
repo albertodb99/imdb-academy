@@ -172,7 +172,7 @@ public class QueryController {
                 .field(agg)
                 .size(1000)
                 .build();
-        request.aggregations("agg_" + agg, termsAggregation._toAggregation());
+        request.aggregations(agg, termsAggregation._toAggregation());
     }
 
 
@@ -288,15 +288,14 @@ public class QueryController {
                 .buckets()
                 .array();
 
-        Stream<JsonObject> jsonObjectStream = buckets.stream()
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+
+        buckets.stream()
                 .map(bucket -> Json.createObjectBuilder()
                         .add("key", bucket.key())
                         .add("doc_count", bucket.docCount())
-                        .build());
-
-        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
-
-        jsonObjectStream.forEach(arrayBuilder::add);
+                        .build())
+                .toList().forEach(arrayBuilder::add);
 
         return arrayBuilder.build().toString();
     }
