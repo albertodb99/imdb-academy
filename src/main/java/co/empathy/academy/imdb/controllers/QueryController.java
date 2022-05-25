@@ -228,7 +228,7 @@ public class QueryController {
     }
 
     private void addSearch(String q, BoolQuery.Builder boolQuery) {
-        if(q.isEmpty()){
+        if(q.trim().isEmpty()){
             addMatchAllQuery(boolQuery);
         }else{
             addSearchWithQuery(q, boolQuery);
