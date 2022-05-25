@@ -280,7 +280,7 @@ public class QueryController {
         return hits;
     }
 
-    private String parseAggregations(String aggName, SearchResponse<JsonData> response){
+    private JsonArrayBuilder parseAggregations(String aggName, SearchResponse<JsonData> response){
         List<StringTermsBucket> buckets = response
                 .aggregations()
                 .get(aggName)
@@ -297,7 +297,7 @@ public class QueryController {
                         .build())
                 .toList().forEach(arrayBuilder::add);
 
-        return arrayBuilder.build().toString();
+        return arrayBuilder;
     }
 
     private String getResultsParsed(SearchResponse<JsonData> response, String agg) {
