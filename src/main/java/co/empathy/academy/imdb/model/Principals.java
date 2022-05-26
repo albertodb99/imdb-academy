@@ -13,14 +13,13 @@ public class Principals {
     private Principals() {}
 
 
-    public static void addPrincipals(List<String> principalsLines, JsonObjectBuilder builder, List<String> akasHeaders,
-                                     Map<String, String[]> nameBasics, List<String> nameHeaders) {
+    public static void addPrincipals(List<String> principalsLines, JsonObjectBuilder builder, List<String> akasHeaders) {
         var principalsArray = Json.createArrayBuilder();
         for(String principalLine : principalsLines) {
             var fields = principalLine.split("\t");
 
             principalsArray.add(Json.createObjectBuilder()
-                    .add("name", Name.addName(fields[NCONST], nameBasics, nameHeaders))
+                    .add("name", Name.addName(fields[NCONST]))
                     .add(akasHeaders.get(CHARACTERS), fields[CHARACTERS])
             );
         }

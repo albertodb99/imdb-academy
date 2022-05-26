@@ -38,8 +38,6 @@ public class BatchReader {
         this.crewReader = new BufferedReader(new FileReader(crewPath));
         this.episodesPath = new BufferedReader(new FileReader(episodesPath));
         this.principalReader = new BufferedReader(new FileReader(principalPath));
-        //nameBasics = Files.readAllLines(Path.of(nameBasicsPath)).stream().map(DELIMITER::split)
-         //       .collect(Collectors.toMap(a -> a[0], a -> a));
         nameBasics = null;
         this.batchSize = batchSize;
         this.hasFinished = false;
@@ -58,7 +56,6 @@ public class BatchReader {
         this.crewHeaders = Arrays.stream(this.crewReader.readLine().split(DELIMITER.pattern())).toList();
         this.episodesHeaders = Arrays.stream(this.episodesPath.readLine().split(DELIMITER.pattern())).toList();
         this.principalHeaders = Arrays.stream(this.principalReader.readLine().split(DELIMITER.pattern())).toList();
-        //this.nameHeaders = Arrays.stream(nameBasics.get("nconst")).toList();
         this.nameHeaders = null;
     }
 
@@ -97,10 +94,10 @@ public class BatchReader {
             Akas.addAkas(akasLines, builder, akasHeaders);
 
             String crewLine = crewReader.readLine();
-            Crew.addCrews(crewLine, builder, crewHeaders, nameBasics, nameHeaders);
+            Crew.addCrews(crewLine, builder, crewHeaders, nameHeaders);
 
             List<String> principalsLines = getLinesAndResetReader(principalReader, currentId);
-            Principals.addPrincipals(principalsLines, builder, principalHeaders, nameBasics, nameHeaders);
+            Principals.addPrincipals(principalsLines, builder, principalHeaders);
 
             result.add(new JsonReference(filmLine.split(DELIMITER.pattern())[0], builder.build()));
             counter++;
