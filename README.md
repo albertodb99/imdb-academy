@@ -51,7 +51,8 @@ It is very important that in the query you add all the datasets included in the 
 Example:
 &nbsp;
 
-<img width="510" alt="image" src="https://user-images.githubusercontent.com/60233035/165483860-1de4928b-002b-431c-83ee-4c946b16c775.png">
+<img width="517" alt="image" src="https://user-images.githubusercontent.com/60233035/170445320-c41185cf-2c17-402c-960d-978280df9dbb.png">
+
 
 &nbsp;
 
